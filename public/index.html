@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>공항버스 LIVE · 출발지역 실시간 조회 샘플</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app-canvas">
+
+  <header class="hero">
+    <div class="hero-sky" aria-hidden="true">
+      <span class="sun"></span>
+      <span class="cloud c1"></span>
+      <span class="cloud c2"></span>
+      <span class="cloud c3"></span>
+      <span class="plane">✈️</span>
+    </div>
+    <div class="hero-inner rise">
+      <div class="logo-chip"><span class="logo-dot">✈️</span> AIRPORT BUS LIVE</div>
+      <h1>출발지역 <em>공항버스</em> 실시간 조회</h1>
+      <p class="hero-sub" id="hero-sub">서울 BMS · 경기 GBIS 샘플페이지</p>
+      <div class="hero-row">
+        <div class="clock chippress" id="clock">--:--:--</div>
+        <button class="chunky chunky-blue" id="refresh-all" type="button">
+          <span class="chunky-icon">🔄</span> 새로고침
+        </button>
+        <button class="chunky chunky-white" id="mode-toggle" type="button">
+          <span class="chunky-icon">🔁</span> <span id="mode-toggle-label">공항→출발지</span>
+        </button>
+        <button class="chunky chunky-white" id="btn-settings" type="button">
+          <span class="chunky-icon">⚙️</span> 설정
+        </button>
+      </div>
+    </div>
+  </header>
+
+    <div class="m-dots" id="m-dots"></div>
+
+  <main class="board">
+    <!-- 카드1: 슬롯 - 기본 서울 BMS 6007 -->
+    <section class="card rise" id="card-6007">
+      <div class="card-head">
+        <span class="route-badge badge-green" id="badge-6007">6007</span>
+        <div class="card-title-wrap">
+          <strong id="head-6007-title">당산푸르지오아파트</strong>
+          <span class="card-sub" id="head-6007-sub">인천공항 터미널 방면</span>
+        </div>
+        <span class="src-chip chip-seoul" id="src-6007">서울 BMS</span>
+      </div>
+      <div class="card-body" id="body-6007">
+        <div class="state-loading"><span class="owl mascot-float">🦉</span><p>연결하는 중…</p></div>
+      </div>
+    </section>
+
+    <!-- 카드2: 슬롯 - 기본 경기 GBIS 7200 계열 -->
+    <section class="card rise" id="card-7200">
+      <div class="card-head">
+        <span class="route-badge badge-orange" id="badge-7200">7200-1</span>
+        <div class="card-title-wrap">
+          <strong id="head-7200-title">구)의정부3동우체국</strong>
+          <span class="card-sub" id="head-7200-sub">인천공항T2 방면</span>
+        </div>
+        <span class="src-chip chip-gbis" id="src-7200">경기 GBIS</span>
+      </div>
+      <div class="card-body" id="body-7200">
+        <div class="state-loading"><span class="owl mascot-float">🦉</span><p>연결하는 중…</p></div>
+      </div>
+    </section>
+  </main>
+  <button class="m-nav m-prev" id="m-prev" type="button" aria-label="이전 카드 전환">‹</button>
+  <button class="m-nav m-next" id="m-next" type="button" aria-label="다음 카드 전환">›</button>
+
+  <footer class="foot">
+    <p>샘플페이지 · <b>서울특별시 노선정보조회 서비스</b>(ws.bus.go.kr) + <b>경기도 버스도착정보 조회 v2</b>(apis.data.go.kr/6410000)</p>
+    <p id="foot-extra">서울 BMS 도착예정 도달정보는 동 키로 미제공이므로 노선 첫/막차와 배차간격 기반 <b>시간표 예측</b>으로 표시합니다. 의정부 구간은 GBIS 초 단위 실시간입니다.</p>
+  </footer>
+</div>
+
+  <!-- 설정 모달 (기준 터미널 · 카드 API 드랍다운 · 최소 필드 · 인증키) -->
+  <div class="modal" id="settings-modal" hidden>
+    <div class="modal-backdrop" id="cfg-backdrop" data-close></div>
+    <div class="modal-panel">
+      <header class="modal-head"><span>⚙️ 설정</span><button type="button" class="modal-close" id="cfg-close" data-close>×</button></header>
+      <div class="modal-body">
+
+        <section class="msec">
+          <h3>기준 공항 터미널</h3>
+          <label class="radio-row" title="B1층 승선 · arsId 92702 (6007 seq 1)"><input type="radio" name="cfg-terminal" value="T2" id="cfg-terminal-t2" /><b>T2</b> · 인천공항T2</label>
+          <label class="radio-row" title="1층 입국장 승선 · arsId 92604 (6007 seq 2)"><input type="radio" name="cfg-terminal" value="T1" id="cfg-terminal-t1" /><b>T1</b> · 인천공항T1</label>
+          <p class="guide">모드 B(공항→출발지)에서 선택 터미널을 승선 지점으로 사용합니다. 노선 상 현재보다 먼저 도착하는 터미널 발 차량이 있으면 그 정거장은 경유로 표시됩니다.</p>
+        </section>
+
+        <section class="msec">
+          <h3>카드1 · 조회 API</h3>
+          <div class="frow"><label>정보제공 API</label>
+            <select id="cfg-c1-api">
+              <option value="seoul">서울 BMS</option>
+              <option value="gyeong">경기 GBIS</option>
+            </select>
+          </div>
+          <div class="fgrp" id="c1-grp-seoul">
+            <div class="frow"><label>노선</label><input id="c1-s-route" type="text" maxlength="12" /></div>
+            <div class="frow"><label>출발 정류장 arsId</label><input id="c1-s-depart" type="text" maxlength="12" /></div>
+            <div class="frow"><label>도착 정류장 arsId</label><input id="c1-s-dest" type="text" maxlength="12" /></div>
+          </div>
+          <div class="fgrp" id="c1-grp-gyeong" hidden>
+            <div class="frow"><label>공항행 노선(첫 항=대표)</label><input id="c1-g-ar" type="text" maxlength="60" /></div>
+            <div class="frow"><label>의정부행 노선(첫 항=대표)</label><input id="c1-g-br" type="text" maxlength="60" /></div>
+            <div class="frow"><label>출발 정류장 이름</label><input id="c1-g-name" type="text" maxlength="40" /></div>
+            <div class="frow"><label>출발 정류장 stationId</label><input id="c1-g-depart" type="text" maxlength="12" /></div>
+            <div class="frow"><label>도착 정류장 stationId</label><input id="c1-g-dest" type="text" maxlength="12" /></div>
+          </div>
+        </section>
+
+        <section class="msec">
+          <h3>카드2 · 조회 API</h3>
+          <div class="frow"><label>정보제공 API</label>
+            <select id="cfg-c2-api">
+              <option value="seoul">서울 BMS</option>
+              <option value="gyeong">경기 GBIS</option>
+            </select>
+          </div>
+          <div class="fgrp" id="c2-grp-seoul" hidden>
+            <div class="frow"><label>노선</label><input id="c2-s-route" type="text" maxlength="12" /></div>
+            <div class="frow"><label>출발 정류장 arsId</label><input id="c2-s-depart" type="text" maxlength="12" /></div>
+            <div class="frow"><label>도착 정류장 arsId</label><input id="c2-s-dest" type="text" maxlength="12" /></div>
+          </div>
+          <div class="fgrp" id="c2-grp-gyeong">
+            <div class="frow"><label>공항행 노선(첫 항=대표)</label><input id="c2-g-ar" type="text" maxlength="60" /></div>
+            <div class="frow"><label>의정부행 노선(첫 항=대표)</label><input id="c2-g-br" type="text" maxlength="60" /></div>
+            <div class="frow"><label>출발 정류장 이름</label><input id="c2-g-name" type="text" maxlength="40" /></div>
+            <div class="frow"><label>출발 정류장 stationId</label><input id="c2-g-depart" type="text" maxlength="12" /></div>
+            <div class="frow"><label>도착 정류장 stationId</label><input id="c2-g-dest" type="text" maxlength="12" /></div>
+          </div>
+        </section>
+
+        <section class="msec">
+          <h3>정류장 ID 조회 방법</h3>
+          <p class="guide">서울 — <a href="https://ws.bus.go.kr" target="_blank" rel="noopener noreferrer">ws.bus.go.kr</a> 노선 검색 → 경유 정류소 목록의 arsId 확인</p>
+          <p class="guide">경기 — <a href="https://www.gbis.go.kr" target="_blank" rel="noopener noreferrer">www.gbis.go.kr</a> '정류장·노선 검색'에서 정류장 클릭 → 주소창 stationId(10자리)</p>
+        </section>
+
+        <section class="msec">
+          <h3>서비스 인증키</h3>
+          <p class="guide">신청방법 — 서울 BMS(ws.bus.go.kr 노선정보조회)와 경기 GBIS(apis.data.go.kr 버스도착정보 v2)에 동일 일반 인증키로 무료 신청 → 발급 키를 아래에 입력</p>
+          <div class="frow"><label>일반 인증키</label><input id="cfg-service-key" type="password" placeholder="입력 즉시 저장 · 이후 노출 없음" autocomplete="off" /></div>
+          <p class="guide" id="key-status"></p>
+        </section>
+
+      </div>
+      <footer class="modal-foot">
+        <button type="button" class="chunky chunky-white" id="cfg-reset">기본값</button>
+        <button type="button" class="chunky chunky-blue" id="cfg-save">저장</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- GitHub Sponsors (dday_csw 동일) -->
+  <a class="sponsor-link" href="https://github.com/sponsors/sudo-redyell" target="_blank" rel="noopener noreferrer" aria-label="Become a sponsor to sudo-redyell(새 창)">💗 Become a sponsor to sudo-redyell</a>
+
+<script src="app.js"></script>
+</body>
+</html>
