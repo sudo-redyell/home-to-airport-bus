@@ -26,6 +26,6 @@ cp .env.example .env        # SERVICE_KEY 입력
 별도 의존성 없음(node ≥ 18). 직접 실행도 가능합니다: `node server.mjs`
 
 ## 파일 구성
-- `server.mjs` — 제로 디펜던시 프록시 + 정적 서버(키 서버 보관, 서울 300초 / GBIS 15초 응답 캐시)
+- `server.mjs` — 제로 디펜던시 프록시 + 정적 서버(키 서버 보관, 서울 300초 / GBIS 60초 응답 캐시)
 - `public/` — index.html / styles.css / app.js (바닐라 JS), 운영 상세 메모는 public/README.md
 - `.env.example` — 인증키 양식

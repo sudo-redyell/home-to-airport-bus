@@ -321,3 +321,4 @@ button { font: inherit; cursor: pointer; }
 .m-nav:active { opacity: .6; }
 .m-prev { left: .45rem; }
 .m-next { right: .45rem; }
+.fgrp[hidden] { display: none; }

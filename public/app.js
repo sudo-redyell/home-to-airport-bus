@@ -9,15 +9,15 @@
  *  경기 GBIS: 초 단위 실시간
  * ───────────────────────────────────────────────────────────────── */
 
-const FRESH_SEC_G = 25;
+const FRESH_SEC_G = 120;
 const FRESH_SEC_S = 120;
 const MODE_NAMES = { A: '출발지→공항', B: '공항→출발지' };
 let MODE = 'A';
 
 /* ─── 설정(v2: 카드 슬롯 × API 드랍다운) ───────────────────────── */
-const CFG_LS = 'ablive:config:v2';
+const CFG_LS = 'ablive:config:v3';
 const DEF_SEOUL = { route: '6007', departArs: '19822', destArs: '19823' };
-const DEF_GYEONG = { aR: '7200-1,7200,N7200', bR: '7200,N7200,7200-1', departName: '구)의정부3동우체국', departStopId: '207000154', destStopId: '207000001' };
+const DEF_GYEONG = { aR: '7200-1', bR: '7200-1', departName: '의정부시외버스터미널', departStopId: '207000594', destStopId: '207000001' };
 const DEFAULT_CONFIG = () => ({
   terminal: 'T2',
   t1Ars: '92604', t2Ars: '92702',
@@ -576,7 +576,6 @@ function openModal() {
     set(`c${n}-s-dest`, card.seoul.destArs);
     set(`c${n}-g-ar`, card.gyeong.aR);
     set(`c${n}-g-br`, card.gyeong.bR);
-    set(`c${n}-g-name`, card.gyeong.departName);
     set(`c${n}-g-depart`, card.gyeong.departStopId);
     set(`c${n}-g-dest`, card.gyeong.destStopId);
     toggleApiGroups(n, card.api);
@@ -606,7 +605,6 @@ function saveFromModal() {
     put(card.seoul, 'destArs', val(`c${n}-s-dest`));
     put(card.gyeong, 'aR', val(`c${n}-g-ar`));
     put(card.gyeong, 'bR', val(`c${n}-g-br`));
-    put(card.gyeong, 'departName', val(`c${n}-g-name`));
     put(card.gyeong, 'departStopId', val(`c${n}-g-depart`));
     put(card.gyeong, 'destStopId', val(`c${n}-g-dest`));
   }

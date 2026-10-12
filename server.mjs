@@ -49,7 +49,7 @@ const SEOUL_OPS = { getBusRouteList: 'strSrch', getStaionByRoute: 'busRouteId' }
 const GBIS_OPS = { getBusArrivalListv2: 'stationId' };
 
 const cache = new Map(); // key -> { t, body }
-const TTL = { seoul: 300_000, gbis: 15_000 };
+const TTL = { seoul: 300_000, gbis: 60_000 };
 const UPSTREAM_TIMEOUT_MS = 12_000;
 
 function sendJson(res, status, obj) {
