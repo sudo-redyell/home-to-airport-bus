@@ -118,6 +118,7 @@ button { font: inherit; cursor: pointer; }
 .state-error { display: grid; gap: .6rem; place-items: center; padding: 1.4rem .4rem; text-align: center;
   color: #b8610c; background: #fff7ec; border: 2px dashed #ffd9a8; border-radius: 1.1rem; }
 .state-error p { margin: 0; font-weight: 800; font-size: .88rem; }
+.state-error .err-detail { margin: -0.3rem 0 0; font-size: .76rem; opacity: .75; }
 
 /* ─── 타임테이블 현황(서울 카드) ─────────────────────────────────── */
 .schedule-status { display: flex; align-items: center; gap: .8rem; }

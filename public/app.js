@@ -88,7 +88,7 @@ const state = new Map();
 for (const def of CARDS) {
   state.set(def.key, {
     def, spec: null, phase: 'loading',
-    data: null, updatedAt: null, timerId: null, inFlight: false, errMsg: null,
+    data: null, updatedAt: null, timerId: null, inFlight: false, errMsg: null, errApiErr: null,
   });
 }
 
@@ -107,12 +107,17 @@ const pad2 = (n) => String(n).padStart(2, '0');
 async function api(op, params) {
   const qs = new URLSearchParams({ op, ...params });
   const r = await fetch(`/api/bus?${qs}`, { headers: { Accept: 'application/json' } });
+  let j = null;
+  try { j = await r.json(); } catch { /* noop */ }
+  if (j && j.ok === false && j.error) { // 서버 구조화 오류(쿼터/키/연결)
+    throw Object.assign(new Error(j.error.title || '조회에 실패했어요'), { apiErr: j.error });
+  }
   if (!r.ok) {
     let detail = `HTTP ${r.status}`;
-    try { const j = await r.json(); detail = j.detail || j.error || detail; } catch { /* noop */ }
+    if (j) detail = j.detail || (j.error && (j.error.detail || j.error.title)) || detail;
     throw new Error(detail);
   }
-  return r.json();
+  return j;
 }
 const seoulItemList = (j) => {
   const b = j && j.msgBody;
@@ -239,7 +244,8 @@ async function loadCard(key) {
   } catch (err) {
     st.spec = st.spec || specFor(st.def);
     st.phase = 'error';
-    st.errMsg = String((err && err.message) || err);
+    st.errApiErr = (err && err.apiErr) || null; // 구조화 친화 오류(제목/상세) 렌더용
+    st.errMsg = String((err && err.message) || err); // 내부 상세
     if (!st.data) {
       clearTimeout(st.timerId);
       st.timerId = setTimeout(() => loadCard(key), 30000);
@@ -357,7 +363,13 @@ function loadingFrag(api) {
 function errorFrag(st) {
   const box = el('div', 'state-error');
   box.appendChild(el('span', 'owl mascot-float', '🦉'));
-  box.appendChild(el('p', null, `조회 실패 — ${st.errMsg ?? '원인 불명'}`));
+  const env = st.errApiErr;
+  if (env) {
+    box.appendChild(el('p', null, env.title || '조회에 실패했어요'));
+    if (env.detail) box.appendChild(el('small', 'err-detail', env.detail));
+  } else {
+    box.appendChild(el('p', null, `조회 실패 — ${st.errMsg ?? '원인 불명'}`));
+  }
   const note = el('div', 'live-note');
   note.appendChild(el('b', null, '자동 재시도'));
   note.appendChild(el('span', null, '잠시 후 다시 조회합니다'));

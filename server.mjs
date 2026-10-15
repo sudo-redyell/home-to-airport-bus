@@ -40,8 +40,8 @@ function loadEnvFile() {
 loadEnvFile();
 
 let SERVICE_KEY = process.env.SERVICE_KEY || '';
-const SEOUL_BASE = 'http://ws.bus.go.kr/api/rest/busRouteInfo';
-const GBIS_BASE = 'https://apis.data.go.kr/6410000/busarrivalservice/v2';
+const SEOUL_BASE = process.env.SEOUL_BASE || 'http://ws.bus.go.kr/api/rest/busRouteInfo'; // 오버라이드 가능(테스트/전환용)
+const GBIS_BASE = process.env.GBIS_BASE || 'https://apis.data.go.kr/6410000/busarrivalservice/v2';
 
 // 서울 노선정보조회: 오퍼레이션명과 쿼리 파라미터(문서 상 getStaionByRoute 표기 그대로 사용)
 const SEOUL_OPS = { getBusRouteList: 'strSrch', getStaionByRoute: 'busRouteId' };
@@ -51,6 +51,50 @@ const GBIS_OPS = { getBusArrivalListv2: 'stationId' };
 const cache = new Map(); // key -> { t, body }
 const TTL = { seoul: 300_000, gbis: 60_000 };
 const UPSTREAM_TIMEOUT_MS = 12_000;
+
+// ── OpenAPI 오류 분류: 업스트림 원문(Cloudflare HTML/XML 등)을 UI에 노출하지 않고
+//    사이트 톤의 친화 메시지로 구조화한다 ──
+function apiErr(code, detail) {
+  const title = {
+    CONN: '버스 정보 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요',
+    QUOTA: '오늘의 조회 한도를 모두 사용했어요. 내일 다시 도전해 주세요!',
+    KEY: 'API 키 인증에 실패했어요. 설정에서 키 상태를 확인해 주세요',
+    UP: '버스 정보 서버가 이상 응답을 보냈어요. 잠시 후 다시 시도해 주세요',
+  }[code];
+  return { ok: false, error: { code, title, detail: detail || '' } };
+}
+
+function classifyUpstream(body) {
+  // JSON 오류 양식: {OpenAPI_ServiceResponse:{cmmMsgHeader:{errMsg,returnReasonCode,returnAuthMsg}}}
+  let cmm = null;
+  if (body && typeof body === 'object') {
+    const header = body.OpenAPI_ServiceResponse && body.OpenAPI_ServiceResponse.cmmMsgHeader;
+    if (header && header.errMsg) cmm = header;
+  } else if (typeof body === 'string') {
+    if (/<OpenAPI_ServiceResponse>/i.test(body)) { // XML 오류(resultType=json 무시 응답)
+      const pick = (tag) => {
+        const m = body.match(new RegExp(`<${tag}>([^<]*)</${tag}>`, 'i'));
+        return m ? m[1].trim() : '';
+      };
+      const errMsg = pick('errMsg');
+      if (!errMsg) return null; // errMsg 부재 XML → 기존 통과 동작 유지
+      cmm = { errMsg, returnReasonCode: pick('returnReasonCode'), returnAuthMsg: pick('returnAuthMsg') };
+    } else if (/cloudflare|<html|<!doctype/i.test(body)) {
+      return apiErr('CONN', `JSON 아님: ${body.length}B 업스트림 페이지 수신`);
+    }
+  }
+  if (!cmm) return null; // 정상 응답
+  const errMsg = String(cmm.errMsg || '');
+  const reason = String(cmm.returnReasonCode || '');
+  const auth = String(cmm.returnAuthMsg || '');
+  const detail = [auth, errMsg].filter(Boolean).join(' · ');
+  if (reason === '22' || /LIMITED_NUMBER_OF_SERVICE/i.test(errMsg)) return apiErr('QUOTA', detail);
+  if (['01', '30', '31', '32', '33'].includes(reason) ||
+      /SERVICE_KEY|IS_NOT_REGISTERED|DEADLINE|APPROVED|ENCODING/i.test(errMsg)) {
+    return apiErr('KEY', detail);
+  }
+  return apiErr('UP', detail);
+}
 
 function sendJson(res, status, obj) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -63,7 +107,7 @@ async function callUpstream(url) {
   try {
     const r = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/json,text/xml;q=0.9' } });
     const text = await r.text();
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { httpStatus: r.status });
     let body;
     try { body = JSON.parse(text); } catch { body = text; }
     return body;
@@ -73,7 +117,7 @@ async function callUpstream(url) {
 }
 
 async function handleApiBus(url, res) {
-  if (!SERVICE_KEY) { sendJson(res, 503, { error: 'SERVICE_KEY 미설정(.env 확인)' }); return; }
+  if (!SERVICE_KEY) { sendJson(res, 503, apiErr('KEY', '서버 .env SERVICE_KEY 미설정(.env 확인)')); return; }
   const op = url.searchParams.get('op') || '';
   let kind;
   let paramKey;
@@ -99,12 +143,20 @@ async function handleApiBus(url, res) {
   }
   try {
     const body = await callUpstream(full);
-    cache.set(full, { t: now, body });
+    const bad = classifyUpstream(body);
+    if (bad) {
+      if (hit) { sendJson(res, 200, hit.body); return; } // 오류여도 마지막 정상 캐시 있으면 제공
+      sendJson(res, 200, bad); // 업스트림 원문(Cloudflare/XML) 노출 대신 구조화된 친화 오류
+      return;
+    }
+    cache.set(full, { t: now, body }); // 정상 응답만 캐시
     sendJson(res, 200, body);
   } catch (err) {
-    const detail = err.name === 'AbortError' ? '업스트림 타임아웃' : String(err.message || err);
     if (hit) { sendJson(res, 200, hit.body); return; } // 실패 시 만료된 캐시라도 제공
-    sendJson(res, 502, { error: '업스트림 조회 실패', detail });
+    const detail = err.name === 'AbortError'
+      ? `업스트림 응답 지연(타임아웃 ${(UPSTREAM_TIMEOUT_MS / 1000) | 0}초)`
+      : `업스트림 요청 실패(${err.httpStatus ? 'HTTP ' + err.httpStatus : '네트워크 ' + String((err.cause && err.cause.code) || err.message || err).slice(0, 80)})`;
+    sendJson(res, 502, apiErr('CONN', detail));
   }
 }
 
