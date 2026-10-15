@@ -17,7 +17,7 @@ let MODE = 'A';
 /* ─── 설정(v2: 카드 슬롯 × API 드랍다운) ───────────────────────── */
 const CFG_LS = 'ablive:config:v3';
 const DEF_SEOUL = { route: '6007', departArs: '19822', destArs: '19823' };
-const DEF_GYEONG = { aR: '7200-1', bR: '7200-1', departName: '의정부시외버스터미널', departStopId: '207000594', destStopId: '207000001' };
+const DEF_GYEONG = { aR: '7200-1', bR: '7200-1', departName: '의정부시외버스터미널', departStopId: '207000594', destStopId: '207000001', svcFirst: '', svcLast: '' };
 const DEFAULT_CONFIG = () => ({
   terminal: 'T2',
   t1Ars: '92604', t2Ars: '92702',
@@ -79,9 +79,11 @@ function specFor(def) {
     };
   }
   const g = cardCfg(def.idx);
+  const svcFirst = String(g.svcFirst ?? '').trim() || null;
+  const svcLast = String(g.svcLast ?? '').trim() || null;
   return MODE === 'A'
-    ? { api: 'gbis', stationId: g.departStopId, altIds: [], primary: [csv(g.aR)[0]], family: csv(g.aR) }
-    : { api: 'gbis', stationId: g.destStopId, altIds: [], primary: [csv(g.bR)[0]], family: csv(g.bR) };
+    ? { api: 'gbis', stationId: g.departStopId, altIds: [], primary: [csv(g.aR)[0]], family: csv(g.aR), svcFirst, svcLast }
+    : { api: 'gbis', stationId: g.destStopId, altIds: [], primary: [csv(g.bR)[0]], family: csv(g.bR), svcFirst, svcLast };
 }
 
 const state = new Map();
@@ -490,45 +492,71 @@ function gbisBody(st) {
 
   const live = d.mine;
   const sec = gfield(live, PREF_KEYS);
-  const row = el('div', 'bus-row');
-  const eta = el('div', `bus-eta${live && sec != null ? '' : ' off'}`);
-  if (live && sec != null) {
-    const mmv = Math.round(sec / 60);
-    if (mmv >= 1) {
-      eta.appendChild(el('b', null, mmv >= 60 ? `${Math.floor(mmv / 60)}시간 ${mmv % 60}` : String(mmv)));
-      eta.appendChild(el('span', null, '분'));
-    } else {
-      eta.appendChild(el('b', null, String(sec)));
-      eta.appendChild(el('span', null, '초'));
-    }
-  } else {
-    eta.appendChild(el('b', null, '🦉'));
-    eta.appendChild(el('span', null, '트래킹 대기'));
-  }
-  row.appendChild(eta);
-  const meta = el('div', 'bus-meta');
-  const routeLabel = live ? String(live.routeName ?? '-') : (MODE === 'A' ? csv(g.aR)[0] : csv(g.bR)[0]);
-  const shortDir = MODE === 'A' ? '인천공항' : (g.departName || '출발 정류장');
-  meta.appendChild(el('b', null, `${routeLabel || '-'} · ${shortDir} 방면`));
-  const where = el('span', 'where');
-  if (live && sec != null) {
-    const bits = [];
-    const prevN = String(live.stationNm1 ?? '').trim();
-    if (prevN) bits.push(`${prevN} 지나`);
-    const locn = gfield(live, ['locationNo1', 'locationNo']);
-    if (locn != null) bits.push(`${locn} 정류장 전`);
-    const seat = Number(live.remainSeatCnt1 ?? live.remainSeatCnt);
-    if (Number.isInteger(seat) && seat >= 0) bits.push(`잔여좌석 ${seat}`);
-    const plate = String(live.plateNo1 ?? '').trim();
-    if (plate) bits.push(plate);
-    where.textContent = bits.join(' · ') || '도착 예정 차량을 트래킹하는 중';
-  } else {
-    where.textContent = '지금은 도착 예정 차량이 트래킹되지 않는 중(운행 종료·대기 배차). 조금 후 다시 확인합니다.';
-  }
-  meta.appendChild(where);
-  row.appendChild(meta);
-  grid.appendChild(row);
+  const sFirst = toMin(st.spec.svcFirst);
+  const sLast = toMin(st.spec.svcLast);
+  const nowm = nowMin();
+  const hasWin = sFirst != null && sLast != null;
+  const svcPast = hasWin && nowm > sLast;
+  const svcEarly = hasWin && nowm < sFirst;
 
+  if ((!live || sec == null) && (svcPast || svcEarly)) {
+    // 운행 시각 창 밖(설정 기준) — 카드1(서울 시간표) 운행종료 레이아웃 파리티
+    const wrap = el('div', 'sched-wrap');
+    wrap.style.display = 'grid';
+    wrap.style.gap = '0.9rem';
+    const status = el('div', 'schedule-status');
+    const big = el('div', 'sched-big night');
+    big.appendChild(el('b', null, fromMin(sFirst)));
+    big.appendChild(el('span', null, svcPast ? '내일 첫차' : '오늘 첫차'));
+    status.appendChild(big);
+    const copy = el('div', 'sched-copy');
+    copy.appendChild(el('strong', null, svcPast ? '오늘 운행 종료' : '운행 시작 전'));
+    copy.appendChild(el('small', null, `금일 첫차 ${st.spec.svcFirst} · 막차 ${st.spec.svcLast}`));
+    status.appendChild(copy);
+    wrap.appendChild(status);
+    grid.appendChild(wrap);
+  } else {
+    const row = el('div', 'bus-row');
+    const eta = el('div', `bus-eta${live && sec != null ? '' : ' off'}`);
+    if (live && sec != null) {
+      const mmv = Math.round(sec / 60);
+      if (mmv >= 1) {
+        eta.appendChild(el('b', null, mmv >= 60 ? `${Math.floor(mmv / 60)}시간 ${mmv % 60}` : String(mmv)));
+        eta.appendChild(el('span', null, '분'));
+      } else {
+        eta.appendChild(el('b', null, String(sec)));
+        eta.appendChild(el('span', null, '초'));
+      }
+    } else {
+      eta.appendChild(el('b', null, '🦉'));
+      eta.appendChild(el('span', null, '트래킹 대기'));
+    }
+    row.appendChild(eta);
+    const meta = el('div', 'bus-meta');
+    const routeLabel = live ? String(live.routeName ?? '-') : (MODE === 'A' ? csv(g.aR)[0] : csv(g.bR)[0]);
+    const shortDir = MODE === 'A' ? '인천공항' : (g.departName || '출발 정류장');
+    meta.appendChild(el('b', null, `${routeLabel || '-'} · ${shortDir} 방면`));
+    const where = el('span', 'where');
+    if (live && sec != null) {
+      const bits = [];
+      const prevN = String(live.stationNm1 ?? '').trim();
+      if (prevN) bits.push(`${prevN} 지나`);
+      const locn = gfield(live, ['locationNo1', 'locationNo']);
+      if (locn != null) bits.push(`${locn} 정류장 전`);
+      const seat = Number(live.remainSeatCnt1 ?? live.remainSeatCnt);
+      if (Number.isInteger(seat) && seat >= 0) bits.push(`잔여좌석 ${seat}`);
+      const plate = String(live.plateNo1 ?? '').trim();
+      if (plate) bits.push(plate);
+      where.textContent = bits.join(' · ') || '도착 예정 차량을 트래킹하는 중';
+    } else if (hasWin && !svcPast && !svcEarly) {
+      where.textContent = '지금은 도착 예정 차량이 트래킹되지 않는 중. 운행 시간대라 조금 뒤 다시 확인합니다.';
+    } else {
+      where.textContent = '지금은 도착 예정 차량이 트래킹되지 않는 중(운행 종료·대기 배차). 설정에서 첫차·막차 시각을 입력하면 운행 종료 안내가 표시돼요.';
+    }
+    meta.appendChild(where);
+    row.appendChild(meta);
+    grid.appendChild(row);
+  }
   if (d.others.length) {
     const others = el('div', 'others');
     others.appendChild(el('span', 'section-kicker', '같은 정류소 다른 공항버스'));
@@ -590,6 +618,8 @@ function openModal() {
     set(`c${n}-g-br`, card.gyeong.bR);
     set(`c${n}-g-depart`, card.gyeong.departStopId);
     set(`c${n}-g-dest`, card.gyeong.destStopId);
+    set(`c${n}-g-svcf`, card.gyeong.svcFirst);
+    set(`c${n}-g-svcl`, card.gyeong.svcLast);
     toggleApiGroups(n, card.api);
   }
   const t2 = byId('cfg-terminal-t2'); const t1 = byId('cfg-terminal-t1');
@@ -619,6 +649,8 @@ function saveFromModal() {
     put(card.gyeong, 'bR', val(`c${n}-g-br`));
     put(card.gyeong, 'departStopId', val(`c${n}-g-depart`));
     put(card.gyeong, 'destStopId', val(`c${n}-g-dest`));
+    put(card.gyeong, 'svcFirst', val(`c${n}-g-svcf`));
+    put(card.gyeong, 'svcLast', val(`c${n}-g-svcl`));
   }
   const t1 = byId('cfg-terminal-t1');
   CONFIG.terminal = t1 && t1.checked ? 'T1' : 'T2';
