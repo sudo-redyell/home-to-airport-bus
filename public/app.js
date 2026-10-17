@@ -228,7 +228,12 @@ async function loadGbis(st) {
   const list = gbisList(j);
   const norm = (x) => String(x ?? '').trim().toUpperCase();
   const mine = list.find((it) => spec.primary.includes(norm(it.routeName))) || null;
-  const others = list.filter((it) => spec.family.includes(norm(it.routeName)) && !spec.primary.includes(norm(it.routeName)));
+  const isAirportRoute = (it) => { const t = String(it.routeTypeCd ?? ''); return t === '51' || t === '53'; };
+  const others = list.filter((it) => {
+    const name = norm(it.routeName);
+    if (spec.primary.includes(name)) return false;
+    return spec.family.includes(name) || isAirportRoute(it);
+  });
 
   st.data = { mine, others };
   st.phase = 'live';
@@ -549,7 +554,7 @@ function gbisBody(st) {
       if (plate) bits.push(plate);
       where.textContent = bits.join(' · ') || '도착 예정 차량을 트래킹하는 중';
     } else if (hasWin && !svcPast && !svcEarly) {
-      where.textContent = '지금은 도착 예정 차량이 트래킹되지 않는 중. 운행 시간대라 조금 뒤 다시 확인합니다.';
+      where.textContent = '지금은 도착 예정 차량이 트래킹되지 않는 중. 출발 전 배차는 GBIS 실시간에 미표기될 수 있으니 조금 뒤 다시 확인합니다.';
     } else {
       where.textContent = '지금은 도착 예정 차량이 트래킹되지 않는 중(운행 종료·대기 배차). 설정에서 첫차·막차 시각을 입력하면 운행 종료 안내가 표시돼요.';
     }
