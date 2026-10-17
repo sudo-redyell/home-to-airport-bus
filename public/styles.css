@@ -138,6 +138,7 @@ button { font: inherit; cursor: pointer; }
 .time-chip.is-next { background: #ecfadd; border-color: #a8e36b; color: #3f9500; }
 .time-chip small { font-weight: 700; color: #97a5b8; margin-left: .25rem; }
 .time-chip.is-next small { color: #68a437; }
+.time-chip.off { opacity: .45; filter: grayscale(.55); }
 
 /* 진행 바 */
 .progress-track { position: relative; height: .8rem; border-radius: 9999px; background: #e6ecf4;
