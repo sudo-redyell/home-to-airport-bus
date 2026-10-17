@@ -114,9 +114,13 @@
             <div class="frow"><label>귀가행 노선(첫 항=대표)</label><input id="c1-g-br" type="text" maxlength="60" /></div>
               <div class="frow"><label>출발 정류장 stationId</label><input id="c1-g-depart" type="text" maxlength="12" /></div>
             <div class="frow"><label>도착 정류장 stationId</label><input id="c1-g-dest" type="text" maxlength="12" /></div>
-            <div class="frow"><label>첫차(선택 HH:MM)</label><input id="c1-g-svcf" type="text" maxlength="5" placeholder="예 05:10" /></div>
-            <div class="frow"><label>막차(선택 HH:MM)</label><input id="c1-g-svcl" type="text" maxlength="5" placeholder="예 23:40" /></div>
-            <div class="frow"><label>도착 시간표(쉼표 HH:MM)</label><input id="c1-g-tt" type="text" maxlength="240" placeholder="예) 04:19,05:49,07:29" /></div>
+            <div class="frow"><label>수동 노선 개수 (첫차·막차 = 시간표 첫/마지막)</label>
+              <select id="c1-g-manual-count">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                <option value="3">3</option><option value="4">4</option>
+              </select>
+            </div>
+            <div class="manual-list" id="c1-g-manual-list"></div>
           </div>
         </section>
 
@@ -138,9 +142,13 @@
             <div class="frow"><label>귀가행 노선(첫 항=대표)</label><input id="c2-g-br" type="text" maxlength="60" /></div>
               <div class="frow"><label>출발 정류장 stationId</label><input id="c2-g-depart" type="text" maxlength="12" /></div>
             <div class="frow"><label>도착 정류장 stationId</label><input id="c2-g-dest" type="text" maxlength="12" /></div>
-            <div class="frow"><label>첫차(선택 HH:MM)</label><input id="c2-g-svcf" type="text" maxlength="5" placeholder="예 05:10" /></div>
-            <div class="frow"><label>막차(선택 HH:MM)</label><input id="c2-g-svcl" type="text" maxlength="5" placeholder="예 23:40" /></div>
-            <div class="frow"><label>도착 시간표(쉼표 HH:MM)</label><input id="c2-g-tt" type="text" maxlength="240" placeholder="예) 04:19,05:49,07:29" /></div>
+            <div class="frow"><label>수동 노선 개수 (첫차·막차 = 시간표 첫/마지막)</label>
+              <select id="c2-g-manual-count">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+                <option value="3">3</option><option value="4">4</option>
+              </select>
+            </div>
+            <div class="manual-list" id="c2-g-manual-list"></div>
           </div>
         </section>
 

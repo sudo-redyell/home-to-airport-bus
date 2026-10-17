@@ -189,11 +189,6 @@ button { font: inherit; cursor: pointer; }
   background: #effaff; border: 2px solid #d5f1ff; border-radius: 1rem; padding: .52rem .8rem; }
 .live-note b { font-size: .84rem; font-weight: 900; color: #0e7cb2; }
 .live-note span { font-size: .72rem; font-weight: 700; color: #5795ad; }
-.live-dot { display: inline-flex; align-items: center; gap: .38rem; font-size: .66rem; font-weight: 900;
-  color: #1899d6; letter-spacing: .14em; }
-.live-dot i { width: .58rem; height: .58rem; border-radius: 9999px; background: #17c964;
-  box-shadow: 0 0 0 3px rgba(23,201,100,.2); animation: blink 1.6s ease-in-out infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
 
 .bus-row { display: flex; align-items: center; gap: .85rem; background: #fff; border: 2px solid #e9f0f8;
   border-radius: 1.05rem; padding: .7rem .85rem; box-shadow: 0 3px 0 0 #e6ecf4; }
@@ -217,13 +212,14 @@ button { font: inherit; cursor: pointer; }
 .mini-badge.low { background: #ecfadd; color: #3f9500; border-color: #a8e36b; }
 .mini-badge.full { background: #ffecec; color: #d32f2f; border-color: #ffb3b3; }
 
-/* 부(부수) 정류소 다른 공항행 */
-.others { display: grid; gap: .4rem; }
-.other-row { display: flex; align-items: center; gap: .55rem; font-size: .78rem; font-weight: 800; color: #5a6980;
-  background: #fff; border: 2px dashed #e4ebf4; border-radius: .8rem; padding: .42rem .7rem; }
-.other-row b { color: #3c4257; font-weight: 900; }
-.other-row .eta { margin-left: auto; font-weight: 900; color: #1899d6; font-variant-numeric: tabular-nums; }
-.other-row .eta.off { color: #b3bdcd; }
+/* 수동 노선 시간표 그룹(설정 UX) */
+.manual-list { display: grid; gap: .3rem; }
+.manual-row { display: grid; grid-template-columns: 1.5rem minmax(0, .8fr) minmax(0, 1.5fr); gap: .4rem; align-items: center; }
+.manual-row .manual-no { display: inline-grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: .45rem;
+  background: #ffe0b8; color: #a86100; font-size: .7rem; font-weight: 900; }
+.manual-row input { width: 100%; border: 2px solid #e5e5e5; border-radius: 8px; padding: .34rem .55rem;
+  font: inherit; font-size: .8rem; font-weight: 700; color: #3c3c3c; background: #fff; }
+.manual-row input:focus { border-color: #84d8ff; outline: none; }
 
 .foot-note { font-size: .72rem; font-weight: 700; color: #97a5b8; line-height: 1.5; }
 .foot-note b { color: #7c8ba1; }
