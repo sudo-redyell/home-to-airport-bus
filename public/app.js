@@ -420,7 +420,7 @@ function seoulBody(st) {
   wrap.appendChild(track);
 
   const chips = el('div', 'time-chips');
-  upcoming.slice(0, 4).forEach((t, i) => {
+  upcoming.forEach((t, i) => {
     const chip = el('span', `time-chip${i === 0 ? ' is-next' : ''}`);
     chip.appendChild(txt(fromMin(t)));
     if (i === 0) chip.appendChild(el('small', null, '다음'));
