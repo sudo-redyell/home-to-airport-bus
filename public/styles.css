@@ -131,7 +131,11 @@ button { font: inherit; cursor: pointer; }
 .sched-copy strong { display: block; font-size: .95rem; font-weight: 900; color: #3c4257; }
 .sched-copy small { color: #7c8ba1; font-weight: 700; font-size: .76rem; }
 
-.time-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+.time-chips { display: flex; gap: .45rem; overflow-x: auto; padding-bottom: .3rem;
+  scrollbar-width: thin; scrollbar-color: #cddbec transparent; }
+.time-chips::-webkit-scrollbar { height: 5px; }
+.time-chips::-webkit-scrollbar-thumb { background: #cddbec; border-radius: 9999px; }
+.time-chips .time-chip { flex: none; white-space: nowrap; }
 .time-chip { padding: .34rem .6rem; border-radius: .7rem; background: #fff; border: 2px solid #e5e5e5;
   font-weight: 900; font-size: .82rem; color: #3c4257; font-variant-numeric: tabular-nums;
   box-shadow: 0 2.5px 0 0 #e6ecf4; }

@@ -293,6 +293,26 @@ const gfield = (it, keys) => {
 };
 const PREF_KEYS = ['predictTime', 'predictTime1', 'remainTime', 'arrBusTime'];
 
+function focusUpcoming(row, chip) {
+  if (!chip) return;
+  let n = 0;
+  const step = () => {
+    if (++n > 5) return;
+    if (typeof row.getBoundingClientRect !== 'function' || !row.isConnected) return;
+    const rr = row.getBoundingClientRect();
+    const cr = chip.getBoundingClientRect();
+    if (!cr.width) { requestAnimationFrame(step); return; }
+    const inside = Math.round(cr.left - rr.left);
+    if (inside <= 0) { row.scrollLeft = Math.max(0, Math.round(row.scrollLeft + inside - 6)); return; }
+    const term = inside - 6;
+    if (Math.abs(term) <= 1) return;
+    row.scrollLeft = row.scrollLeft + term;
+    if (n < 5) requestAnimationFrame(step);
+  };
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(step);
+  else step();
+}
+
 function stopChipNo(stop, mine, plane) {
   const blank = !String((stop && stop.arsId) ?? '').trim();
   const base = stopNameOf(stop);
@@ -421,13 +441,15 @@ function seoulBody(st) {
   wrap.appendChild(track);
 
   const chips = el('div', 'time-chips');
+  let firstChip = null;
   upcoming.forEach((t, i) => {
     const chip = el('span', `time-chip${i === 0 ? ' is-next' : ''}`);
     chip.appendChild(txt(fromMin(t)));
-    if (i === 0) chip.appendChild(el('small', null, '다음'));
+    if (i === 0) { chip.appendChild(el('small', null, '다음')); firstChip = chip; }
     chips.appendChild(chip);
   });
   wrap.appendChild(chips);
+  focusUpcoming(chips, firstChip);
 
   const stat = el('div', 'stat-grid');
   const statItem = (v, k) => {
@@ -557,15 +579,17 @@ function gbisBody(st) {
     status.appendChild(copy);
     wrap.appendChild(status);
     const chips = el('div', 'time-chips');
+    let nextChip = null;
     for (const t of ttArr) {
       const chip = el('span', `time-chip${t === next && !done ? ' is-next' : ''}${t < nowm ? ' off' : ''}`);
       chip.appendChild(txt(fromMin(t)));
-      if (t === next && !done) chip.appendChild(el('small', null, '다음'));
+      if (t === next && !done) { chip.appendChild(el('small', null, '다음')); nextChip = chip; }
       else if (t === ttArr[0]) chip.appendChild(el('small', null, '첫차'));
       else if (t === ttArr[ttArr.length - 1]) chip.appendChild(el('small', null, '막차'));
       chips.appendChild(chip);
     }
     wrap.appendChild(chips);
+    focusUpcoming(chips, nextChip);
     grid.appendChild(wrap);
     const warn = el('p', 'foot-note');
     warn.appendChild(el('b', null, '트래킹 정보가 제공되지 않아 시간표 기준으로 안내합니다'));
